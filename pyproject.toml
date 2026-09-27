@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plantranger"
+version = "0.1.0"
+description = "Asynchronous client for the Plant Ranger API"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [{ name = "Digital Buttes LLC" }]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = ["aiohttp>=3.9"]
+
+[project.urls]
+Homepage = "https://github.com/digitalbuttesorg/python-plantranger"
+
+[tool.setuptools.packages.find]
+include = ["plantranger*"]
+
+[tool.ruff]
+target-version = "py312"
