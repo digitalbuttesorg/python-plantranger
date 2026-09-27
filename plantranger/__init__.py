@@ -1,5 +1,7 @@
 """Asynchronous client for the Plant Ranger API."""
 
+__version__ = "0.1.0"
+
 from .auth import AbstractAuth
 from .client import PlantRangerClient
 from .const import API_HOST, OAUTH2_AUTHORIZE, OAUTH2_TOKEN, WEB_HOST

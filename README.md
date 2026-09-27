@@ -43,3 +43,20 @@ export PLANTRANGER_WEB_HOST=http://localhost:4000
 ```
 
 `API_HOST` is used for the API, `WEB_HOST` for the OAuth authorize and token endpoints.
+
+## Releasing
+
+Releases publish to PyPI from GitHub Actions when a `v*` tag is pushed. The
+workflow refuses to publish if the tag does not match `__version__`.
+
+1. Bump `__version__` in `plantranger/__init__.py` and add a section to
+   `CHANGELOG.md`.
+2. Commit, then tag and push:
+
+```bash
+git tag v0.1.0
+git push origin main v0.1.0
+```
+
+Publishing uses PyPI Trusted Publishing against the `pypi` GitHub environment,
+so no API token is stored in the repo.
