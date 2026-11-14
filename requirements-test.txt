@@ -1,0 +1,4 @@
+# Test tools for plantranger.
+# Install:  make setup   (creates .venv and installs these)
+pytest==9.2.0
+pytest-asyncio==1.4.1

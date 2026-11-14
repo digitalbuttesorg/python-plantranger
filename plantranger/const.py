@@ -17,3 +17,12 @@ API_BASE_PATH: Final = "/v1"
 OAUTH2_AUTHORIZE: Final = f"{WEB_HOST}/oauth/authorize"
 # Code exchange and refresh both live on the web host; the API only refreshes.
 OAUTH2_TOKEN: Final = f"{WEB_HOST}/oauth/token"
+
+SENSOR_STATUS_UNREGISTERED: Final = "unregistered"
+SENSOR_STATUS_IN_TEAM: Final = "in_team"
+SENSOR_STATUS_OTHER_TEAM: Final = "other_team"
+SENSOR_STATUS_NOT_A_SENSOR: Final = "not_a_sensor"
+
+REJECT_REASON_INVALID_MAC: Final = "invalid_mac"
+REJECT_REASON_INVALID_SAMPLE: Final = "invalid_sample"
+REJECT_REASON_NOT_IN_TEAM: Final = "not_in_team"

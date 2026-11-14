@@ -8,10 +8,14 @@ from aiohttp import ClientError, ClientResponse, ClientSession
 
 from .const import API_BASE_PATH, API_HOST
 from .exceptions import (
+    PlantRangerAccountActionError,
     PlantRangerAuthError,
     PlantRangerConnectionError,
     PlantRangerError,
+    PlantRangerForbiddenError,
 )
+
+_CODE_ACCOUNT_ACTION_REQUIRED = "ACCOUNT_ACTION_REQUIRED"
 
 
 class AbstractAuth(ABC):
@@ -46,26 +50,49 @@ class AbstractAuth(ABC):
         except ClientError as err:
             raise PlantRangerConnectionError(str(err)) from err
 
-    async def get_json(self, path: str, **kwargs: Any) -> dict[str, Any]:
-        """Make a GET request and return the decoded body."""
-        response = await self.request("GET", path, **kwargs)
+    async def request_json(
+        self, method: str, path: str, *, json: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Make a request and return the decoded body."""
+        response = await self.request(method, path, json=json)
         async with response:
-            if response.status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
-                raise PlantRangerAuthError(await _error_message(response))
             if response.status >= HTTPStatus.BAD_REQUEST:
-                raise PlantRangerError(await _error_message(response))
+                raise await _error(response)
             try:
                 return await response.json()
             except (ClientError, ValueError) as err:
                 raise PlantRangerError(f"Malformed response from {path}") from err
 
 
-async def _error_message(response: ClientResponse) -> str:
-    """Pull the message out of the API's error envelope."""
+async def _error(response: ClientResponse) -> PlantRangerError:
+    """Build the exception for an error response."""
+    message, code = await _error_details(response)
+    if response.status == HTTPStatus.UNAUTHORIZED:
+        return PlantRangerAuthError(message)
+    if response.status == HTTPStatus.FORBIDDEN:
+        return PlantRangerForbiddenError(message)
+    if (
+        response.status == HTTPStatus.BAD_REQUEST
+        and code == _CODE_ACCOUNT_ACTION_REQUIRED
+    ):
+        return PlantRangerAccountActionError(message)
+    if response.status in (
+        HTTPStatus.BAD_GATEWAY,
+        HTTPStatus.SERVICE_UNAVAILABLE,
+        HTTPStatus.GATEWAY_TIMEOUT,
+    ):
+        return PlantRangerConnectionError(message)
+    return PlantRangerError(message)
+
+
+async def _error_details(response: ClientResponse) -> tuple[str, str | None]:
+    """Pull the message and code out of the API's error envelope."""
     try:
         body = await response.json()
     except (ClientError, ValueError):
-        return f"HTTP {response.status}"
-    if isinstance(body, dict) and (message := body.get("message")):
-        return f"HTTP {response.status}: {message}"
-    return f"HTTP {response.status}"
+        return f"HTTP {response.status}", None
+    if not isinstance(body, dict):
+        return f"HTTP {response.status}", None
+    if message := body.get("message"):
+        return f"HTTP {response.status}: {message}", body.get("code")
+    return f"HTTP {response.status}", body.get("code")
