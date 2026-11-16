@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import quote
 
 from .auth import AbstractAuth
 from .exceptions import PlantRangerError
@@ -14,6 +15,13 @@ from .models import (
     Team,
     TeamListItem,
 )
+
+
+def _quote(value: str) -> str:
+    """Quote a value for use as a single path segment."""
+    if value in ("", ".", ".."):
+        raise PlantRangerError(f"Invalid path value: {value!r}")
+    return quote(value, safe="")
 
 
 class PlantRangerClient:
@@ -50,16 +58,20 @@ class PlantRangerClient:
 
     async def get_team(self, team_id: str) -> Team:
         """Return a team with its plant and bridge summaries."""
-        return await self._request(Team.from_dict, "GET", f"/teams/{team_id}")
+        return await self._request(Team.from_dict, "GET", f"/teams/{_quote(team_id)}")
 
     async def get_plant(self, plant_id: str) -> FullPlant:
         """Return full detail for a single plant."""
-        return await self._request(FullPlant.from_dict, "GET", f"/plants/{plant_id}")
+        return await self._request(
+            FullPlant.from_dict, "GET", f"/plants/{_quote(plant_id)}"
+        )
 
     async def get_sensor(self, team_id: str, mac: str) -> SensorStatus:
         """Return what a sensor's MAC address is to a team."""
         return await self._request(
-            SensorStatus.from_dict, "GET", f"/teams/{team_id}/sensors/{mac}"
+            SensorStatus.from_dict,
+            "GET",
+            f"/teams/{_quote(team_id)}/sensors/{_quote(mac)}",
         )
 
     async def register_sensor(
@@ -72,7 +84,7 @@ class PlantRangerClient:
         return await self._request(
             PlantSummary.from_dict,
             "POST",
-            f"/teams/{team_id}/sensors/{mac}",
+            f"/teams/{_quote(team_id)}/sensors/{_quote(mac)}",
             json=body,
         )
 
@@ -83,6 +95,6 @@ class PlantRangerClient:
         return await self._request(
             SubmitResult.from_dict,
             "POST",
-            f"/teams/{team_id}/samples",
+            f"/teams/{_quote(team_id)}/samples",
             json={"samples": [sample.as_dict() for sample in samples]},
         )

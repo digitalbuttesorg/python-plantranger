@@ -20,6 +20,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - A timeout raises `PlantRangerConnectionError`.
 - A response that is not a JSON object, or is missing a required field, raises
   `PlantRangerError`.
+- Path values are percent-encoded. An empty, `.` or `..` value raises
+  `PlantRangerError`.
 
 ## [0.1.0] - 2026-09-27
 

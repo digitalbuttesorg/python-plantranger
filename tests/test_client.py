@@ -1,7 +1,7 @@
 """Tests for the Plant Ranger client."""
 
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, override
 from unittest.mock import patch
 
@@ -48,6 +48,7 @@ class MockApi:
         self.host = ""
         self.headers: dict[str, str] = {}
         self.json: dict[str, Any] | None = None
+        self.path = ""
         self._responses: dict[tuple[str, str], web.Response] = {}
 
     def respond(
@@ -70,6 +71,7 @@ class MockApi:
         """Record the request and return the route's response."""
         self.headers = dict(request.headers)
         self.json = await request.json() if request.can_read_body else None
+        self.path = request.raw_path
         return self._responses[(request.method, request.path)]
 
 
@@ -285,6 +287,20 @@ async def test_submit_samples_naive_time(
     }
 
 
+async def test_submit_samples_other_timezone(
+    mock_api: MockApi, client: PlantRangerClient
+) -> None:
+    """Test a time in another timezone is sent as UTC."""
+    mock_api.respond("POST", SAMPLES_PATH, status=202, payload={"accepted": 1})
+    time = SAMPLE_TIME.astimezone(timezone(timedelta(hours=2)))
+
+    await client.submit_samples(TEAM_ID, [Sample(mac=MAC, time=time)])
+
+    assert mock_api.json == {
+        "samples": [{"mac": MAC, "time": "2026-01-02T15:04:05+00:00"}]
+    }
+
+
 async def test_submit_samples_non_finite(
     mock_api: MockApi, client: PlantRangerClient
 ) -> None:
@@ -426,6 +442,29 @@ async def test_malformed_rejected(
 
     with pytest.raises(PlantRangerError, match="Malformed response"):
         await client.submit_samples(TEAM_ID, [Sample(mac=MAC, time=SAMPLE_TIME)])
+
+
+async def test_path_value_quoted(mock_api: MockApi, client: PlantRangerClient) -> None:
+    """Test a value with a slash is sent as a single path segment."""
+    mock_api.respond("GET", "/v1/teams/a/b", payload={"id": "a/b"})
+
+    await client.get_team("a/b")
+
+    assert mock_api.path == "/v1/teams/a%2Fb"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param("", id="empty"),
+        pytest.param(".", id="dot"),
+        pytest.param("..", id="dot_dot"),
+    ],
+)
+async def test_invalid_path_value(client: PlantRangerClient, value: str) -> None:
+    """Test a value that would change the request path raises."""
+    with pytest.raises(PlantRangerError, match="Invalid path value"):
+        await client.get_sensor(TEAM_ID, value)
 
 
 async def test_connection_error() -> None:

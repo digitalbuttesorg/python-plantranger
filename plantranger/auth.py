@@ -96,7 +96,7 @@ async def _error_details(response: ClientResponse) -> tuple[str, str | None]:
     """Pull the message and code out of the API's error envelope."""
     try:
         body = await response.json()
-    except (ClientError, ValueError):
+    except (ClientError, TimeoutError, ValueError):
         return f"HTTP {response.status}", None
     if not isinstance(body, dict):
         return f"HTTP {response.status}", None

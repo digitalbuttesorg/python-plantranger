@@ -310,7 +310,10 @@ class Sample:
     def as_dict(self) -> dict[str, str | float]:
         """Build an API payload, leaving out missing and non-finite readings."""
         time = self.time if self.time.tzinfo else self.time.replace(tzinfo=UTC)
-        data: dict[str, str | float] = {"mac": self.mac, "time": time.isoformat()}
+        data: dict[str, str | float] = {
+            "mac": self.mac,
+            "time": time.astimezone(UTC).isoformat(),
+        }
         for key in (
             "battery",
             "conductivity",
