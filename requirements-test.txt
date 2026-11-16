@@ -2,3 +2,6 @@
 # Install:  make setup   (creates .venv and installs these)
 pytest==9.2.0
 pytest-asyncio==1.4.1
+mypy==2.4.1
+pre-commit==4.3.0
+pytest-cov==7.1.0

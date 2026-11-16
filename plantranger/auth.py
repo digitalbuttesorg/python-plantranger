@@ -59,9 +59,10 @@ class AbstractAuth(ABC):
             if response.status >= HTTPStatus.BAD_REQUEST:
                 raise await _error(response)
             try:
-                return await response.json()
+                data: dict[str, Any] = await response.json()
             except (ClientError, ValueError) as err:
                 raise PlantRangerError(f"Malformed response from {path}") from err
+            return data
 
 
 async def _error(response: ClientResponse) -> PlantRangerError:

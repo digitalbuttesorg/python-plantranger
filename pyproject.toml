@@ -71,3 +71,105 @@ testpaths = [
 
 [tool.ruff]
 target-version = "py312"
+
+# Rule selection follows Home Assistant core, minus its HA-specific entries.
+[tool.ruff.lint]
+select = [
+    "A001",   # builtin shadowing
+    "ASYNC",  # flake8-async
+    "B",      # flake8-bugbear
+    "BLE",    # blind except
+    "C",      # complexity
+    "COM818", # trailing comma on bare tuple
+    "D",      # docstrings
+    "DTZ",    # naive datetimes
+    "E",      # pycodestyle
+    "F",      # pyflakes
+    "FLY",    # flynt
+    "FURB",   # refurb
+    "G",      # flake8-logging-format
+    "I",      # isort
+    "INP",    # flake8-no-pep420
+    "ISC",    # flake8-implicit-str-concat
+    "LOG",    # flake8-logging
+    "N",      # pep8-naming
+    "PERF",   # Perflint
+    "PGH",    # pygrep-hooks
+    "PIE",    # flake8-pie
+    "PL",     # pylint
+    "PT",     # flake8-pytest-style
+    "PTH",    # flake8-pathlib
+    "PYI",    # flake8-pyi
+    "RET",    # flake8-return
+    "RSE",    # flake8-raise
+    "RUF",    # ruff
+    "S",      # flake8-bandit
+    "SIM",    # flake8-simplify
+    "SLF",    # flake8-self
+    "SLOT",   # flake8-slots
+    "T10",    # debugger
+    "T20",    # flake8-print
+    "TC",     # flake8-type-checking
+    "TID",    # tidy imports
+    "TRY",    # tryceratops
+    "UP",     # pyupgrade
+    "W",      # pycodestyle
+]
+ignore = [
+    "COM812",  # conflicts with the formatter
+    "D203",    # conflicts with D211
+    "D213",    # conflicts with D212
+    "E501",    # line length is the formatter's job
+    "PLR2004", # magic values
+    "TRY003",  # long exception messages
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "INP001", # tests are not a package
+    "S101",   # assert
+    "S105",   # fake tokens
+    "S106",
+    "SLF001", # tests reach into private members
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 25
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.codespell]
+skip = "./.*"
+quiet-level = 2
+
+[tool.mypy]
+# The oldest supported version, so newer-only syntax is caught.
+python_version = "3.12"
+strict = true
+local_partial_types = true
+strict_bytes = true
+warn_unreachable = true
+enable_error_code = [
+    "deprecated",
+    "explicit-override",
+    "ignore-without-code",
+    "redundant-self",
+    "truthy-iterable",
+]
+
+[tool.coverage.run]
+source = [
+    "plantranger",
+]
+branch = true
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "@overload",
+]
