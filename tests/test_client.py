@@ -2,7 +2,7 @@
 
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, override
 
 import pytest
 from aiohttp import ClientSession, web
@@ -33,6 +33,7 @@ SAMPLE_TIME = datetime(2026, 1, 2, 15, 4, 5, tzinfo=UTC)
 class MockAuth(AbstractAuth):
     """Auth with a fixed token."""
 
+    @override
     async def async_get_access_token(self) -> str:
         """Return a valid access token."""
         return "token"
@@ -355,7 +356,7 @@ async def test_error_without_envelope(
     """Test an error response that is not JSON falls back to the status."""
     mock_api.respond("GET", SENSOR_PATH, status=503, html="<html>")
 
-    with pytest.raises(PlantRangerConnectionError, match="^HTTP 503$"):
+    with pytest.raises(PlantRangerConnectionError, match=r"^HTTP 503$"):
         await client.get_sensor(TEAM_ID, MAC)
 
 

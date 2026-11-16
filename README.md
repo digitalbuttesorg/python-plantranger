@@ -42,8 +42,19 @@ Errors raise `PlantRangerAuthError` (401), `PlantRangerForbiddenError` (403, a s
 
 ## Testing
 
+Needs Python 3.12 or newer.
+
 ```bash
-make test
+make test       # pytest with coverage
+make lint       # ruff, codespell, zizmor, yamllint
+make typecheck  # mypy
+make check      # all of the above, same as CI
+```
+
+To run the hooks on every commit:
+
+```bash
+.venv/bin/pre-commit install
 ```
 
 ## Pointing at a local server
