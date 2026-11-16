@@ -330,7 +330,7 @@ class RejectedSample:
     """A submitted sample that was not accepted."""
 
     mac: str
-    reason: str
+    reason: str | None = None
     time: datetime | None = None
 
     @classmethod
@@ -338,7 +338,7 @@ class RejectedSample:
         """Build from an API payload."""
         return cls(
             mac=data["mac"],
-            reason=data["reason"],
+            reason=data.get("reason"),
             time=_parse_datetime(data.get("time")),
         )
 

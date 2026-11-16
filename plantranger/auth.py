@@ -47,6 +47,8 @@ class AbstractAuth(ABC):
                 headers=headers,
                 **kwargs,
             )
+        except TimeoutError as err:
+            raise PlantRangerConnectionError(f"Timeout calling {path}") from err
         except ClientError as err:
             raise PlantRangerConnectionError(str(err)) from err
 
@@ -59,9 +61,13 @@ class AbstractAuth(ABC):
             if response.status >= HTTPStatus.BAD_REQUEST:
                 raise await _error(response)
             try:
-                data: dict[str, Any] = await response.json()
+                data = await response.json()
+            except TimeoutError as err:
+                raise PlantRangerConnectionError(f"Timeout calling {path}") from err
             except (ClientError, ValueError) as err:
                 raise PlantRangerError(f"Malformed response from {path}") from err
+            if not isinstance(data, dict):
+                raise PlantRangerError(f"Malformed response from {path}")
             return data
 
 
