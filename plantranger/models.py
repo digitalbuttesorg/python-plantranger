@@ -1,5 +1,6 @@
 """Models for the Plant Ranger API."""
 
+import math
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Self
@@ -270,4 +271,92 @@ class FullPlant:
             last_checkup=_parse_datetime(data.get("last_checkup")),
             next_checkup=_parse_datetime(data.get("next_checkup")),
             species_data=SpeciesData.from_dict(data.get("species_data") or {}),
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class SensorStatus:
+    """What a sensor's MAC address is to a team."""
+
+    status: str
+    plant_id: str | None = None
+    plant_name: str | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Build from an API payload."""
+        return cls(
+            status=data["status"],
+            plant_id=data.get("plant_id"),
+            plant_name=data.get("plant_name"),
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class Sample:
+    """A sensor reading to submit."""
+
+    mac: str
+    time: datetime
+
+    battery: float | None = None
+    conductivity: float | None = None
+    humidity: float | None = None
+    light: float | None = None
+    moisture: float | None = None
+    rssi: float | None = None
+    temperature: float | None = None
+
+    def as_dict(self) -> dict[str, str | float]:
+        """Build an API payload, leaving out missing and non-finite readings."""
+        time = self.time if self.time.tzinfo else self.time.replace(tzinfo=UTC)
+        data: dict[str, str | float] = {"mac": self.mac, "time": time.isoformat()}
+        for key in (
+            "battery",
+            "conductivity",
+            "humidity",
+            "light",
+            "moisture",
+            "rssi",
+            "temperature",
+        ):
+            if (value := getattr(self, key)) is not None and math.isfinite(value):
+                data[key] = value
+        return data
+
+
+@dataclass(frozen=True, kw_only=True)
+class RejectedSample:
+    """A submitted sample that was not accepted."""
+
+    mac: str
+    reason: str
+    time: datetime | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Build from an API payload."""
+        return cls(
+            mac=data["mac"],
+            reason=data["reason"],
+            time=_parse_datetime(data.get("time")),
+        )
+
+
+@dataclass(frozen=True, kw_only=True)
+class SubmitResult:
+    """The outcome of submitting samples."""
+
+    accepted: int = 0
+    rejected: list[RejectedSample] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Build from an API payload."""
+        return cls(
+            accepted=data.get("accepted") or 0,
+            rejected=[
+                RejectedSample.from_dict(sample)
+                for sample in data.get("rejected") or []
+            ],
         )
