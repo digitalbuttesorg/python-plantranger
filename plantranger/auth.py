@@ -4,7 +4,16 @@ from abc import ABC, abstractmethod
 from http import HTTPStatus
 from typing import Any
 
-from aiohttp import ClientError, ClientResponse, ClientSession
+from aiohttp import (
+    ClientConnectionError,
+    ClientError,
+    ClientPayloadError,
+    ClientResponse,
+    ClientSession,
+    InvalidURL,
+    NonHttpUrlClientError,
+    TooManyRedirects,
+)
 
 from .const import API_BASE_PATH, API_HOST
 from .exceptions import (
@@ -49,6 +58,8 @@ class AbstractAuth(ABC):
             )
         except TimeoutError as err:
             raise PlantRangerConnectionError(f"Timeout calling {path}") from err
+        except (InvalidURL, NonHttpUrlClientError, TooManyRedirects) as err:
+            raise PlantRangerError(str(err)) from err
         except ClientError as err:
             raise PlantRangerConnectionError(str(err)) from err
 
@@ -64,6 +75,8 @@ class AbstractAuth(ABC):
                 data = await response.json()
             except TimeoutError as err:
                 raise PlantRangerConnectionError(f"Timeout calling {path}") from err
+            except (ClientConnectionError, ClientPayloadError) as err:
+                raise PlantRangerConnectionError(str(err)) from err
             except (ClientError, ValueError) as err:
                 raise PlantRangerError(f"Malformed response from {path}") from err
             if not isinstance(data, dict):
@@ -84,6 +97,7 @@ async def _error(response: ClientResponse) -> PlantRangerError:
     ):
         return PlantRangerAccountActionError(message)
     if response.status in (
+        HTTPStatus.REQUEST_TIMEOUT,
         HTTPStatus.BAD_GATEWAY,
         HTTPStatus.SERVICE_UNAVAILABLE,
         HTTPStatus.GATEWAY_TIMEOUT,

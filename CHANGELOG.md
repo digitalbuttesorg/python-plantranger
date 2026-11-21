@@ -16,8 +16,11 @@ project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - `AbstractAuth.request_json()` replaces `get_json()` and also sends JSON bodies.
-- A 502, 503 or 504 raises `PlantRangerConnectionError`.
-- A timeout raises `PlantRangerConnectionError`.
+- A 408, 502, 503 or 504 raises `PlantRangerConnectionError`.
+- A timeout, or a connection that drops while reading the response, raises
+  `PlantRangerConnectionError`.
+- An invalid or non-HTTP URL, or too many redirects, raises `PlantRangerError`.
+- Requires aiohttp 3.10 or later.
 - A response that is not a JSON object, or is missing a required field, raises
   `PlantRangerError`.
 - Path values are percent-encoded. An empty, `.` or `..` value raises

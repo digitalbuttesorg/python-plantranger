@@ -38,7 +38,7 @@ async with ClientSession() as session:
 
 Errors raise `PlantRangerAuthError` (401), `PlantRangerForbiddenError` (403, a subclass of
 `PlantRangerAuthError`), `PlantRangerAccountActionError` (400 `ACCOUNT_ACTION_REQUIRED`),
-`PlantRangerConnectionError` (transport, 502, 503 or 504) or `PlantRangerError` (everything else).
+`PlantRangerConnectionError` (transport, 408, 502, 503 or 504) or `PlantRangerError` (everything else).
 
 ## Testing
 

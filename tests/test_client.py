@@ -3,10 +3,22 @@
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, override
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
-from aiohttp import ClientResponse, ClientSession, ServerTimeoutError, web
+from aiohttp import (
+    ClientOSError,
+    ClientPayloadError,
+    ClientResponse,
+    ClientSession,
+    InvalidUrlClientError,
+    NonHttpUrlClientError,
+    NonHttpUrlRedirectClientError,
+    ServerDisconnectedError,
+    ServerTimeoutError,
+    TooManyRedirects,
+    web,
+)
 from aiohttp.test_utils import TestServer, unused_port
 
 from plantranger import (
@@ -346,6 +358,9 @@ async def test_submit_samples_empty(client: PlantRangerClient) -> None:
         ),
         pytest.param(400, "INVALID_REQUEST", PlantRangerError, id="bad_request"),
         pytest.param(404, "NOT_FOUND", PlantRangerError, id="not_found"),
+        pytest.param(
+            408, "REQUEST_TIMEOUT", PlantRangerConnectionError, id="request_timeout"
+        ),
         pytest.param(500, "INTERNAL", PlantRangerError, id="server_error"),
         pytest.param(502, "BAD_GATEWAY", PlantRangerConnectionError, id="bad_gateway"),
         pytest.param(503, "UNAVAILABLE", PlantRangerConnectionError, id="unavailable"),
@@ -401,6 +416,19 @@ async def test_malformed_response(mock_api: MockApi, client: PlantRangerClient) 
     mock_api.respond("GET", SENSOR_PATH, html="<html>")
 
     with pytest.raises(PlantRangerError, match="Malformed response"):
+        await client.get_sensor(TEAM_ID, MAC)
+
+
+async def test_invalid_json_response(
+    mock_api: MockApi, client: PlantRangerClient
+) -> None:
+    """Test a successful response that is not valid JSON raises."""
+    mock_api.respond("GET", SENSOR_PATH, payload={})
+
+    with (
+        patch.object(ClientResponse, "json", side_effect=ValueError),
+        pytest.raises(PlantRangerError, match="Malformed response"),
+    ):
         await client.get_sensor(TEAM_ID, MAC)
 
 
@@ -487,6 +515,30 @@ async def test_request_timeout(client: PlantRangerClient) -> None:
         await client.get_sensor(TEAM_ID, MAC)
 
 
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(InvalidUrlClientError("http://"), id="invalid_url"),
+        pytest.param(NonHttpUrlClientError("ftp://example.com"), id="non_http_url"),
+        pytest.param(
+            NonHttpUrlRedirectClientError("ftp://example.com"), id="non_http_redirect"
+        ),
+        pytest.param(TooManyRedirects(Mock(), ()), id="too_many_redirects"),
+    ],
+)
+async def test_request_config_error(
+    client: PlantRangerClient, error: Exception
+) -> None:
+    """Test a request that a retry cannot fix raises a non-connection error."""
+    with (
+        patch.object(ClientSession, "request", side_effect=error),
+        pytest.raises(PlantRangerError) as err,
+    ):
+        await client.get_sensor(TEAM_ID, MAC)
+
+    assert type(err.value) is PlantRangerError
+
+
 async def test_response_timeout(mock_api: MockApi, client: PlantRangerClient) -> None:
     """Test a response body that times out raises a connection error."""
     mock_api.respond("GET", SENSOR_PATH, payload={})
@@ -494,5 +546,28 @@ async def test_response_timeout(mock_api: MockApi, client: PlantRangerClient) ->
     with (
         patch.object(ClientResponse, "json", side_effect=ServerTimeoutError),
         pytest.raises(PlantRangerConnectionError, match="Timeout calling"),
+    ):
+        await client.get_sensor(TEAM_ID, MAC)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        pytest.param(ServerDisconnectedError(), id="disconnected"),
+        pytest.param(ClientOSError(), id="os_error"),
+        pytest.param(
+            ClientPayloadError("Response payload is not completed"), id="payload"
+        ),
+    ],
+)
+async def test_response_connection_error(
+    mock_api: MockApi, client: PlantRangerClient, error: Exception
+) -> None:
+    """Test a response body that fails to arrive raises a connection error."""
+    mock_api.respond("GET", SENSOR_PATH, payload={})
+
+    with (
+        patch.object(ClientResponse, "json", side_effect=error),
+        pytest.raises(PlantRangerConnectionError),
     ):
         await client.get_sensor(TEAM_ID, MAC)
