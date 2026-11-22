@@ -4,7 +4,16 @@ from abc import ABC, abstractmethod
 from http import HTTPStatus
 from typing import Any
 
-from aiohttp import ClientError, ClientResponse, ClientSession
+from aiohttp import (
+    ClientConnectionError,
+    ClientError,
+    ClientPayloadError,
+    ClientResponse,
+    ClientSession,
+    InvalidURL,
+    NonHttpUrlClientError,
+    TooManyRedirects,
+)
 
 from .const import API_BASE_PATH, API_HOST
 from .exceptions import (
@@ -47,6 +56,10 @@ class AbstractAuth(ABC):
                 headers=headers,
                 **kwargs,
             )
+        except TimeoutError as err:
+            raise PlantRangerConnectionError(f"Timeout calling {path}") from err
+        except (InvalidURL, NonHttpUrlClientError, TooManyRedirects) as err:
+            raise PlantRangerError(str(err)) from err
         except ClientError as err:
             raise PlantRangerConnectionError(str(err)) from err
 
@@ -59,9 +72,15 @@ class AbstractAuth(ABC):
             if response.status >= HTTPStatus.BAD_REQUEST:
                 raise await _error(response)
             try:
-                data: dict[str, Any] = await response.json()
+                data = await response.json()
+            except TimeoutError as err:
+                raise PlantRangerConnectionError(f"Timeout calling {path}") from err
+            except (ClientConnectionError, ClientPayloadError) as err:
+                raise PlantRangerConnectionError(str(err)) from err
             except (ClientError, ValueError) as err:
                 raise PlantRangerError(f"Malformed response from {path}") from err
+            if not isinstance(data, dict):
+                raise PlantRangerError(f"Malformed response from {path}")
             return data
 
 
@@ -78,6 +97,8 @@ async def _error(response: ClientResponse) -> PlantRangerError:
     ):
         return PlantRangerAccountActionError(message)
     if response.status in (
+        HTTPStatus.REQUEST_TIMEOUT,
+        HTTPStatus.INTERNAL_SERVER_ERROR,
         HTTPStatus.BAD_GATEWAY,
         HTTPStatus.SERVICE_UNAVAILABLE,
         HTTPStatus.GATEWAY_TIMEOUT,
@@ -90,7 +111,7 @@ async def _error_details(response: ClientResponse) -> tuple[str, str | None]:
     """Pull the message and code out of the API's error envelope."""
     try:
         body = await response.json()
-    except (ClientError, ValueError):
+    except (ClientError, TimeoutError, ValueError):
         return f"HTTP {response.status}", None
     if not isinstance(body, dict):
         return f"HTTP {response.status}", None
