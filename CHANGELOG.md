@@ -16,7 +16,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 
 - `AbstractAuth.request_json()` replaces `get_json()` and also sends JSON bodies.
-- A 408, 502, 503 or 504 raises `PlantRangerConnectionError`.
+- A 408, 500, 502, 503 or 504 raises `PlantRangerConnectionError`.
 - A timeout, or a connection that drops while reading the response, raises
   `PlantRangerConnectionError`.
 - An invalid or non-HTTP URL, or too many redirects, raises `PlantRangerError`.

@@ -98,6 +98,7 @@ async def _error(response: ClientResponse) -> PlantRangerError:
         return PlantRangerAccountActionError(message)
     if response.status in (
         HTTPStatus.REQUEST_TIMEOUT,
+        HTTPStatus.INTERNAL_SERVER_ERROR,
         HTTPStatus.BAD_GATEWAY,
         HTTPStatus.SERVICE_UNAVAILABLE,
         HTTPStatus.GATEWAY_TIMEOUT,

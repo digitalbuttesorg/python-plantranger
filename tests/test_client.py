@@ -361,7 +361,7 @@ async def test_submit_samples_empty(client: PlantRangerClient) -> None:
         pytest.param(
             408, "REQUEST_TIMEOUT", PlantRangerConnectionError, id="request_timeout"
         ),
-        pytest.param(500, "INTERNAL", PlantRangerError, id="server_error"),
+        pytest.param(500, "INTERNAL", PlantRangerConnectionError, id="server_error"),
         pytest.param(502, "BAD_GATEWAY", PlantRangerConnectionError, id="bad_gateway"),
         pytest.param(503, "UNAVAILABLE", PlantRangerConnectionError, id="unavailable"),
         pytest.param(
